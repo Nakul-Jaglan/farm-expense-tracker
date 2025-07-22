@@ -1,3 +1,4 @@
+"use client";
 import React from 'react';
 import { format, isToday, isThisWeek, isThisMonth, parseISO } from 'date-fns';
 
