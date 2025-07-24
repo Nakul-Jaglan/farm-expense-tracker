@@ -91,6 +91,15 @@ export default function Home() {
 
   const handleCancelEdit = () => setEditExpense(null);
 
+  const handleDeleteExpense = (expense) => {
+    if (activeTab === 'farm') {
+      setFarmExpenses((prev) => prev.filter((e) => e.id !== expense.id));
+    } else if (activeTab === 'garden') {
+      setGardenExpenses((prev) => prev.filter((e) => e.id !== expense.id));
+    }
+    if (editExpense && editExpense.id === expense.id) setEditExpense(null);
+  };
+
   // CSV Export: all data
   const handleExportCSV = () => {
     const all = [
@@ -137,7 +146,7 @@ export default function Home() {
           onCancelEdit={handleCancelEdit}
         />
         <div className="mt-4">
-          <ExpenseList expenses={expenses} onEdit={handleEditExpense} />
+          <ExpenseList expenses={expenses} onEdit={handleEditExpense} onDelete={handleDeleteExpense} />
         </div>
       </>
     );

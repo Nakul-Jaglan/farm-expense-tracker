@@ -58,7 +58,7 @@ export default function ReportSummary({ allExpenses, onExportCSV, onImportCSV })
         <ul className="text-sm">
           {Object.entries(byYear).sort((a, b) => b[0] - a[0]).map(([yr, exps]) => (
             <li key={yr} className="mb-1">
-              <span className="font-semibold text-green-600">{yr}:</span> ₹{sumExpenses(exps).toFixed(2)}
+              <span className="font-semibold text-gray-600">{yr}:</span> <span className="text-green-600">₹{sumExpenses(exps).toFixed(2)}</span>
             </li>
           ))}
         </ul>
@@ -68,8 +68,8 @@ export default function ReportSummary({ allExpenses, onExportCSV, onImportCSV })
         <div className="grid grid-cols-3 gap-2">
           {MONTHS.map((mon, i) => (
             <div key={mon} className="bg-gray-50 rounded p-2 flex flex-col items-center border border-gray-100">
-              <div className="font-semibold text-green-600 text-xs">{mon.slice(0,3)}</div>
-              <div className="text-sm font-bold">₹{sumExpenses(byMonth[mon] || []).toFixed(2)}</div>
+              <div className="font-semibold text-gray-600 text-xs">{mon.slice(0,3)}</div>
+              <div className="text-sm font-bold text-green-600">₹{sumExpenses(byMonth[mon] || []).toFixed(2)}</div>
             </div>
           ))}
         </div>
