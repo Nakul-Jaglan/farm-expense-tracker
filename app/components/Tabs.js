@@ -13,7 +13,7 @@ export default function Tabs({ activeTab, onTabChange }) {
       {tabs.map((tab) => (
         <button
           key={tab.key}
-          className={`flex-1 py-3 text-sm font-medium focus:outline-none transition-colors duration-200 ${
+          className={`flex-1 py-3 text-sm font-medium focus:outline-none transition-colors cursor-pointer hover:bg-gray-100 duration-200 ${
             activeTab === tab.key ? 'text-green-700 border-b-2 border-green-600 bg-green-50' : 'text-gray-500'
           }`}
           onClick={() => onTabChange(tab.key)}
