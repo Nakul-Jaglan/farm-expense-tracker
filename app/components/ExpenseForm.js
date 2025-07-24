@@ -2,22 +2,38 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 
-export default function ExpenseForm({ onAddExpense }) {
-  const [item, setItem] = useState('');
-  const [price, setPrice] = useState('');
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+export default function ExpenseForm({ onAddExpense, editExpense, onUpdateExpense, onCancelEdit }) {
+  // If editing, prefill fields
+  const isEditing = !!editExpense;
+  const [item, setItem] = useState(editExpense?.item || '');
+  const [totalAmount, setTotalAmount] = useState(editExpense?.totalAmount?.toString() || '');
+  const [amountPaid, setAmountPaid] = useState(editExpense?.amountPaid?.toString() || '');
+  const [remarks, setRemarks] = useState(editExpense?.remarks || '');
+  const [date, setDate] = useState(editExpense?.date || format(new Date(), 'yyyy-MM-dd'));
+
+  const balance = (parseFloat(totalAmount || 0) - parseFloat(amountPaid || 0)).toFixed(2);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!item || !price) return;
-    onAddExpense({
+    if (!item || !totalAmount || !amountPaid) return;
+    const expense = {
       item,
-      price: parseFloat(price),
+      totalAmount: parseFloat(totalAmount),
+      amountPaid: parseFloat(amountPaid),
+      balance: parseFloat(balance),
+      remarks,
       date,
-      id: Date.now(),
-    });
+      id: isEditing ? editExpense.id : Date.now(),
+    };
+    if (isEditing) {
+      onUpdateExpense(expense);
+    } else {
+      onAddExpense(expense);
+    }
     setItem('');
-    setPrice('');
+    setTotalAmount('');
+    setAmountPaid('');
+    setRemarks('');
     setDate(format(new Date(), 'yyyy-MM-dd'));
   };
 
@@ -33,13 +49,38 @@ export default function ExpenseForm({ onAddExpense }) {
       />
       <input
         type="number"
-        placeholder="Price"
+        placeholder="Total Amount"
         className="border rounded px-3 py-2 text-black"
-        value={price}
-        onChange={(e) => setPrice(e.target.value)}
+        value={totalAmount}
+        onChange={(e) => setTotalAmount(e.target.value)}
         min="0"
         step="0.01"
         required
+      />
+      <input
+        type="number"
+        placeholder="Amount Paid"
+        className="border rounded px-3 py-2 text-black"
+        value={amountPaid}
+        onChange={(e) => setAmountPaid(e.target.value)}
+        min="0"
+        step="0.01"
+        required
+      />
+      <input
+        type="text"
+        placeholder="Balance (auto)"
+        className="border rounded px-3 py-2 text-black bg-gray-100 cursor-not-allowed"
+        value={balance}
+        readOnly
+        tabIndex={-1}
+      />
+      <input
+        type="text"
+        placeholder="Remarks"
+        className="border rounded px-3 py-2 text-black"
+        value={remarks}
+        onChange={(e) => setRemarks(e.target.value)}
       />
       <input
         type="date"
@@ -48,7 +89,16 @@ export default function ExpenseForm({ onAddExpense }) {
         onChange={(e) => setDate(e.target.value)}
         required
       />
-      <button type="submit" className="bg-green-600 text-white rounded py-2 mt-2 hover:bg-green-700 transition">Add Expense</button>
+      <div className="flex gap-2 mt-2">
+        <button type="submit" className="flex-1 bg-green-600 text-white rounded py-2 hover:bg-green-700 transition">
+          {isEditing ? 'Update' : 'Add'} Expense
+        </button>
+        {isEditing && (
+          <button type="button" className="flex-1 bg-gray-300 text-gray-700 rounded py-2 hover:bg-gray-400 transition" onClick={onCancelEdit}>
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   );
 } 

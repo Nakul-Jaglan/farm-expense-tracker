@@ -1,23 +1,43 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
 
-export default function ExpenseList({ expenses }) {
+export default function ExpenseList({ expenses, onEdit }) {
+  const [expandedId, setExpandedId] = useState(null);
   if (!expenses.length) {
     return <div className="text-center text-gray-400 py-6">No expenses yet.</div>;
   }
   const sorted = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
   return (
     <ul className="divide-y divide-gray-200 bg-white rounded-lg shadow p-2">
-      {sorted.map((exp) => (
-        <li key={exp.id} className="flex justify-between items-center py-2 px-1">
-          <div>
-            <div className="font-medium text-gray-800">{exp.item}</div>
-            <div className="text-xs text-gray-400">{format(new Date(exp.date), 'MMM d, yyyy')}</div>
-          </div>
-          <div className="text-green-700 font-semibold">₹{exp.price.toFixed(2)}</div>
-        </li>
-      ))}
+      {sorted.map((exp) => {
+        const expanded = expandedId === exp.id;
+        return (
+          <li key={exp.id} className="py-2 px-1">
+            <div className="flex justify-between items-center cursor-pointer" onClick={() => setExpandedId(expanded ? null : exp.id)}>
+              <div>
+                <div className="font-medium text-gray-800">{format(new Date(exp.date), 'MMM d, yyyy')}</div>
+                <div className="text-xs text-gray-500">Paid: ₹{exp.amountPaid?.toFixed(2) ?? '0.00'}</div>
+                <div className="text-xs text-gray-400">{exp.remarks}</div>
+              </div>
+              <button
+                className="text-xs text-blue-600 border border-blue-200 rounded px-2 py-1 hover:bg-blue-50 ml-2"
+                onClick={e => { e.stopPropagation(); onEdit(exp); }}
+              >Edit</button>
+            </div>
+            {expanded && (
+              <div className="mt-2 bg-gray-50 rounded p-2 text-xs text-gray-700">
+                <div><span className="font-semibold">Item:</span> {exp.item}</div>
+                <div><span className="font-semibold">Total Amount:</span> ₹{exp.totalAmount?.toFixed(2) ?? '0.00'}</div>
+                <div><span className="font-semibold">Amount Paid:</span> ₹{exp.amountPaid?.toFixed(2) ?? '0.00'}</div>
+                <div><span className="font-semibold">Balance:</span> ₹{exp.balance?.toFixed(2) ?? '0.00'}</div>
+                <div><span className="font-semibold">Remarks:</span> {exp.remarks || '-'}</div>
+                <div><span className="font-semibold">Date:</span> {format(new Date(exp.date), 'yyyy-MM-dd')}</div>
+              </div>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 } 
