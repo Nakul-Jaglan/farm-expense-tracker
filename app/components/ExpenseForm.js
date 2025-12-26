@@ -23,13 +23,17 @@ export default function ExpenseForm({ onAddExpense, editExpense, onUpdateExpense
       balance: parseFloat(balance),
       remarks,
       date,
-      id: isEditing ? editExpense.id : Date.now(),
     };
+    
     if (isEditing) {
+      // Include the ID for updates (MongoDB uses _id)
+      expense._id = editExpense._id || editExpense.id;
+      expense.id = editExpense.id;
       onUpdateExpense(expense);
     } else {
       onAddExpense(expense);
     }
+    
     setItem('');
     setTotalAmount('');
     setAmountPaid('');

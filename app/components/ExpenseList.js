@@ -17,10 +17,11 @@ export default function ExpenseList({ expenses, onEdit, onDelete }) {
   return (
     <ul className="divide-y divide-gray-200 bg-white rounded-lg shadow p-2">
       {sorted.map((exp) => {
-        const expanded = expandedId === exp.id;
+        const expId = exp._id || exp.id;
+        const expanded = expandedId === expId;
         return (
-          <li key={exp.id} className="py-2 px-1">
-            <div className="flex justify-between items-center cursor-pointer" onClick={() => setExpandedId(expanded ? null : exp.id)}>
+          <li key={expId} className="py-2 px-1">
+            <div className="flex justify-between items-center cursor-pointer" onClick={() => setExpandedId(expanded ? null : expId)}>
               <div>
                 <div className="font-medium text-gray-800">{format(new Date(exp.date), 'MMM d, yyyy')}</div>
                 <div className="text-xs text-gray-500">Paid: ₹{exp.amountPaid?.toFixed(2) ?? '0.00'}</div>

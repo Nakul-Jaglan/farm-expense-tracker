@@ -6,25 +6,6 @@ import ExpenseForm from './components/ExpenseForm';
 import ExpenseList from './components/ExpenseList';
 import ReportSummary from './components/ReportSummary';
 
-const STORAGE_KEYS = {
-  farm: 'expenses_farm',
-  garden: 'expenses_garden',
-};
-
-function getStoredExpenses(key) {
-  if (typeof window === 'undefined') return [];
-  try {
-    return JSON.parse(localStorage.getItem(key)) || [];
-  } catch {
-    return [];
-  }
-}
-
-function setStoredExpenses(key, expenses) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(key, JSON.stringify(expenses));
-}
-
 function toCSV(arr) {
   if (!arr.length) return '';
   const header = Object.keys(arr[0]).join(',');
@@ -43,7 +24,6 @@ function fromCSV(csv) {
     if (obj.totalAmount) obj.totalAmount = parseFloat(obj.totalAmount);
     if (obj.amountPaid) obj.amountPaid = parseFloat(obj.amountPaid);
     if (obj.balance) obj.balance = parseFloat(obj.balance);
-    if (obj.id) obj.id = Number(obj.id);
     return obj;
   });
 }
@@ -53,26 +33,47 @@ export default function Home() {
   const [farmExpenses, setFarmExpenses] = useState([]);
   const [gardenExpenses, setGardenExpenses] = useState([]);
   const [editExpense, setEditExpense] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Load from localStorage on mount
+  // Fetch expenses from API
   useEffect(() => {
-    setFarmExpenses(getStoredExpenses(STORAGE_KEYS.farm));
-    setGardenExpenses(getStoredExpenses(STORAGE_KEYS.garden));
+    fetchExpenses();
   }, []);
 
-  // Save to localStorage when expenses change
-  useEffect(() => {
-    setStoredExpenses(STORAGE_KEYS.farm, farmExpenses);
-  }, [farmExpenses]);
-  useEffect(() => {
-    setStoredExpenses(STORAGE_KEYS.garden, gardenExpenses);
-  }, [gardenExpenses]);
+  const fetchExpenses = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/expenses');
+      if (response.ok) {
+        const allExpenses = await response.json();
+        setFarmExpenses(allExpenses.filter(e => e.category === 'farm'));
+        setGardenExpenses(allExpenses.filter(e => e.category === 'garden'));
+      }
+    } catch (error) {
+      console.error('Error fetching expenses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleAddExpense = (expense) => {
-    if (activeTab === 'farm') {
-      setFarmExpenses((prev) => [expense, ...prev]);
-    } else if (activeTab === 'garden') {
-      setGardenExpenses((prev) => [expense, ...prev]);
+  const handleAddExpense = async (expense) => {
+    try {
+      const response = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...expense, category: activeTab })
+      });
+
+      if (response.ok) {
+        const newExpense = await response.json();
+        if (activeTab === 'farm') {
+          setFarmExpenses((prev) => [newExpense, ...prev]);
+        } else if (activeTab === 'garden') {
+          setGardenExpenses((prev) => [newExpense, ...prev]);
+        }
+      }
+    } catch (error) {
+      console.error('Error adding expense:', error);
     }
   };
 
@@ -80,24 +81,51 @@ export default function Home() {
     setEditExpense(expense);
   };
 
-  const handleUpdateExpense = (updated) => {
-    if (activeTab === 'farm') {
-      setFarmExpenses((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
-    } else if (activeTab === 'garden') {
-      setGardenExpenses((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+  const handleUpdateExpense = async (updated) => {
+    try {
+      const expenseId = updated._id || updated.id;
+      const response = await fetch(`/api/expenses/${expenseId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      });
+
+      if (response.ok) {
+        const updatedExpense = await response.json();
+        const updatedId = updatedExpense._id || updatedExpense.id;
+        if (activeTab === 'farm') {
+          setFarmExpenses((prev) => prev.map((e) => ((e._id || e.id) === updatedId ? updatedExpense : e)));
+        } else if (activeTab === 'garden') {
+          setGardenExpenses((prev) => prev.map((e) => ((e._id || e.id) === updatedId ? updatedExpense : e)));
+        }
+        setEditExpense(null);
+      }
+    } catch (error) {
+      console.error('Error updating expense:', error);
     }
-    setEditExpense(null);
   };
 
   const handleCancelEdit = () => setEditExpense(null);
 
-  const handleDeleteExpense = (expense) => {
-    if (activeTab === 'farm') {
-      setFarmExpenses((prev) => prev.filter((e) => e.id !== expense.id));
-    } else if (activeTab === 'garden') {
-      setGardenExpenses((prev) => prev.filter((e) => e.id !== expense.id));
+  const handleDeleteExpense = async (expense) => {
+    try {
+      const expenseId = expense._id || expense.id;
+      const response = await fetch(`/api/expenses/${expenseId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        if (activeTab === 'farm') {
+          setFarmExpenses((prev) => prev.filter((e) => (e._id || e.id) !== expenseId));
+        } else if (activeTab === 'garden') {
+          setGardenExpenses((prev) => prev.filter((e) => (e._id || e.id) !== expenseId));
+        }
+        const editId = editExpense?._id || editExpense?.id;
+        if (editExpense && editId === expenseId) setEditExpense(null);
+      }
+    } catch (error) {
+      console.error('Error deleting expense:', error);
     }
-    if (editExpense && editExpense.id === expense.id) setEditExpense(null);
   };
 
   // CSV Export: all data
@@ -116,23 +144,46 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
-  // CSV Import: merge data
-  const handleImportCSV = (e) => {
+  // CSV Import: merge data with backend
+  const handleImportCSV = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       const text = evt.target.result;
       const arr = fromCSV(text);
-      const farm = arr.filter(e => e.category === 'farm');
-      const garden = arr.filter(e => e.category === 'garden');
-      setFarmExpenses(farm.concat(farmExpenses.filter(e => !farm.some(f => f.id === e.id))));
-      setGardenExpenses(garden.concat(gardenExpenses.filter(e => !garden.some(g => g.id === e.id))));
+      
+      // Import each expense to the backend
+      for (const expense of arr) {
+        try {
+          await fetch('/api/expenses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(expense)
+          });
+        } catch (error) {
+          console.error('Error importing expense:', error);
+        }
+      }
+      
+      // Refresh the list
+      fetchExpenses();
     };
     reader.readAsText(file);
     // Reset file input so same file can be re-imported if needed
     e.target.value = '';
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-md mx-auto min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   let content;
   if (activeTab === 'farm' || activeTab === 'garden') {
